@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로또 추첨기</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f3e7ff 0%, #fff0f5 50%, #e3f2ff 100%);
+        }
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        .header p {
+            color: #6b7280;
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .result-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .result-header h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        .result-header p {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        .balls-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .ball {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 4px solid;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            position: relative;
+        }
+        .ball:hover {
+            transform: scale(1.1);
+        }
+        .ball.yellow { background: #fbbf24; border-color: #d97706; }
+        .ball.blue { background: #60a5fa; border-color: #2563eb; }
+        .ball.red { background: #f87171; border-color: #dc2626; }
+        .ball.gray { background: #4b5563; border-color: #1f2937; }
+        .ball.green { background: #10b981; border-color: #059669; }
+        .ball.locked {
+            box-shadow: 0 0 0 4px #a855f7;
+        }
+        .lock-icon {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            color: #7c3aed;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-redraw {
+            background: linear-gradient(to right, #f97316, #dc2626);
+            color: white;
+        }
+        .btn-redraw:hover {
+            background: linear-gradient(to right, #ea580c, #b91c1c);
+        }
+        .btn-clear {
+            padding: 0.5rem 1rem;
+            background: #e5e7eb;
+            color: #1f2937;
+            font-size: 0.875rem;
+        }
+        .btn-clear:hover {
+            background: #d1d5db;
+        }
+        .btn-draw {
+            padding: 1rem 3rem;
+            font-size: 1.25rem;
+            background: linear-gradient(to right, #9333ea, #2563eb);
+            color: white;
+            border-radius: 0.75rem;
+        }
+        .btn-draw:hover {
+            background: linear-gradient(to right, #7e22ce, #1d4ed8);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .locked-numbers {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #faf5ff;
+            border-radius: 0.5rem;
+        }
+        .locked-numbers p {
+            font-size: 0.875rem;
+            color: #7c3aed;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .locked-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .locked-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+        }
+        .locked-tag:hover {
+            opacity: 0.8;
+        }
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 0.5rem;
+        }
+        .number-btn {
+            aspect-ratio: 1;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .number-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+        }
+        .number-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .number-btn.unlocked {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .number-btn.unlocked:hover:not(:disabled) {
+            background: #e5e7eb;
+        }
+        .number-btn.locked {
+            color: white;
+            box-shadow: 0 0 0 2px #a855f7, 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .number-btn .lock-icon-small {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            color: #7c3aed;
+        }
+        .center-content {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .hint {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        .animate-bounce {
+            animation: bounce 0.6s ease-in-out infinite;
+        }
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .numbers-grid {
+                grid-template-columns: repeat(7, 1fr);
+            }
+            .ball {
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // 아이콘 컴포넌트들
+        const ShuffleIcon = () => (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        );
+
+        const LockIcon = ({ className = "w-5 h-5" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        );
+
+        const UnlockIcon = ({ className = "w-4 h-4" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+        );
+
+        const RefreshIcon = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        );
+
+        function LottoDrawApp() {
+            const [drawnNumbers, setDrawnNumbers] = useState([]);
+            const [lockedNumbers, setLockedNumbers] = useState([]);
+            const [isDrawing, setIsDrawing] = useState(false);
+
+            // 로또 번호 추첨 (고정된 번호 제외)
+            const drawNumbers = () => {
+                setIsDrawing(true);
+                
+                setTimeout(() => {
+                    const numbersNeeded = 6 - lockedNumbers.length;
+                    const availableNumbers = Array.from({ length: 45 }, (_, i) => i + 1)
+                        .filter(num => !lockedNumbers.includes(num));
+                    
+                    // Fisher-Yates 셔플 알고리즘
+                    const shuffled = [...availableNumbers];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    
+                    const newNumbers = shuffled.slice(0, numbersNeeded);
+                    const result = [...lockedNumbers, ...newNumbers].sort((a, b) => a - b);
+                    
+                    setDrawnNumbers(result);
+                    setIsDrawing(false);
+                }, 500);
+            };
+
+            // 번호 고정/해제 토글
+            const toggleLockNumber = (num) => {
+                if (lockedNumbers.includes(num)) {
+                    setLockedNumbers(lockedNumbers.filter(n => n !== num));
+                } else {
+                    if (lockedNumbers.length < 6) {
+                        setLockedNumbers([...lockedNumbers, num].sort((a, b) => a - b));
+                    }
+                }
+            };
+
+            // 모든 고정 해제
+            const clearAllLocks = () => {
+                setLockedNumbers([]);
+            };
+
+            // 재추첨 (당첨자가 없을 때)
+            const redraw = () => {
+                setDrawnNumbers([]);
+                drawNumbers();
+            };
+
+            // 번호 색상 결정 (로또 공식 색상)
+            const getNumberColor = (num) => {
+                if (num <= 10) return 'yellow';
+                if (num <= 20) return 'blue';
+                if (num <= 30) return 'red';
+                if (num <= 40) return 'gray';
+                return 'green';
+            };
+
+            return (
+                <div>
+                    <div className="container">
+                        {/* 헤더 */}
+                        <div className="header">
+                            <h1>🎰 로또 추첨기</h1>
+                            <p>번호를 고정하고 나머지만 추첨할 수 있습니다</p>
+                        </div>
+
+                        {/* 추첨 결과 */}
+                        {drawnNumbers.length > 0 && (
+                            <div className="card animate-fade-in">
+                                <div className="result-header">
+                                    <h2>추첨 결과</h2>
+                                    <p>
+                                        {lockedNumbers.length > 0 && `(고정: ${lockedNumbers.length}개, 추첨: ${6 - lockedNumbers.length}개)`}
+                                    </p>
+                                </div>
+                                <div className="balls-container">
+                                    {drawnNumbers.map((num, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`ball ${getNumberColor(num)} 
+                                                ${isDrawing ? 'animate-bounce' : 'animate-fade-in'}
+                                                ${lockedNumbers.includes(num) ? 'locked' : ''}`}
+                                            style={{ animationDelay: `${idx * 0.1}s` }}
+                                        >
+                                            {num}
+                                            {lockedNumbers.includes(num) && (
+                                                <LockIcon className="lock-icon" />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="center-content">
+                                    <button
+                                        onClick={redraw}
+                                        disabled={isDrawing}
+                                        className="btn btn-redraw"
+                                    >
+                                        <RefreshIcon />
+                                        당첨자 없음 - 재추첨
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 번호 고정 패널 */}
+                        <div className="card">
+                            <div className="section-header">
+                                <h2>번호 고정 ({lockedNumbers.length}/6)</h2>
+                                {lockedNumbers.length > 0 && (
+                                    <button
+                                        onClick={clearAllLocks}
+                                        className="btn btn-clear"
+                                    >
+                                        <UnlockIcon />
+                                        전체 해제
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {lockedNumbers.length > 0 && (
+                                <div className="locked-numbers">
+                                    <p>고정된 번호:</p>
+                                    <div className="locked-tags">
+                                        {lockedNumbers.map(num => (
+                                            <span
+                                                key={num}
+                                                onClick={() => toggleLockNumber(num)}
+                                                className={`locked-tag ${getNumberColor(num)}`}
+                                            >
+                                                {num} ×
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="numbers-grid">
+                                {Array.from({ length: 45 }, (_, i) => i + 1).map(num => {
+                                    const isLocked = lockedNumbers.includes(num);
+                                    return (
+                                        <button
+                                            key={num}
+                                            onClick={() => toggleLockNumber(num)}
+                                            disabled={!isLocked && lockedNumbers.length >= 6}
+                                            className={`number-btn ${isLocked ? `locked ${getNumberColor(num)}` : 'unlocked'}`}
+                                        >
+                                            {num}
+                                            {isLocked && (
+                                                <LockIcon className="lock-icon-small" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* 추첨 버튼 */}
+                        <div className="text-center">
+                            <button
+                                onClick={drawNumbers}
+                                disabled={isDrawing}
+                                className="btn btn-draw"
+                            >
+                                <ShuffleIcon />
+                                {isDrawing ? '추첨 중...' : '로또 번호 추첨하기'}
+                            </button>
+                            <p className="hint">
+                                💡 번호를 클릭하여 고정하고, 나머지만 추첨할 수 있습니다
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LottoDrawApp />);
+    </script>
+</body>
+</html>
